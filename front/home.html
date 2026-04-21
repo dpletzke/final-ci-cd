@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trabajo Final CI-CD — Boston House Price Prediction</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --blue-dark:  #1a3a6b;
+      --blue-mid:   #2563eb;
+      --blue-light: #dbeafe;
+      --white:      #ffffff;
+      --gray-50:    #f8fafc;
+      --gray-200:   #e2e8f0;
+      --gray-400:   #94a3b8;
+      --gray-600:   #475569;
+      --gray-800:   #1e293b;
+      --black:      #0f172a;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--gray-50);
+      color: var(--gray-800);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--blue-dark);
+      padding: 20px 40px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+    }
+
+    .logo-wrap {
+      background: var(--white);
+      border-radius: 8px;
+      padding: 8px 14px;
+      flex-shrink: 0;
+    }
+
+    .logo-wrap img { height: 48px; display: block; }
+
+    .header-text { color: var(--white); }
+
+    .header-text h1 {
+      font-size: 1.45rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+    }
+
+    .header-text h2 {
+      font-size: 0.9rem;
+      font-weight: 400;
+      color: #93c5fd;
+      margin-top: 3px;
+    }
+
+    /* ── Main ── */
+    main {
+      flex: 1;
+      max-width: 980px;
+      width: 100%;
+      margin: 36px auto;
+      padding: 0 20px;
+    }
+
+    .card {
+      background: var(--white);
+      border-radius: 14px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08), 0 8px 24px rgba(0,0,0,0.06);
+      padding: 36px 40px;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .section-icon {
+      width: 40px;
+      height: 40px;
+      background: var(--blue-light);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      color: var(--blue-mid);
+    }
+
+    .section-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--blue-dark);
+    }
+
+    .section-hint {
+      font-size: 0.8rem;
+      color: var(--gray-600);
+      margin-top: 3px;
+      line-height: 1.5;
+    }
+
+    .section-hint strong { color: var(--gray-800); }
+
+    /* ── Form grid ── */
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px 18px;
+    }
+
+    .form-group { position: relative; }
+
+    .form-label {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--gray-600);
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      margin-bottom: 6px;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 10px 13px;
+      border: 1.5px solid var(--gray-200);
+      border-radius: 8px;
+      font-size: 0.88rem;
+      font-family: inherit;
+      color: var(--gray-800);
+      background: var(--white);
+      transition: border-color 0.18s, box-shadow 0.18s;
+    }
+
+    .form-input:focus {
+      outline: none;
+      border-color: var(--blue-mid);
+      box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
+    }
+
+    .form-input::placeholder { color: var(--gray-400); font-size: 0.82rem; }
+
+    /* ── Tooltip ── */
+    .tip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 15px;
+      height: 15px;
+      background: var(--gray-400);
+      color: var(--white);
+      border-radius: 50%;
+      font-size: 9px;
+      font-weight: 700;
+      cursor: help;
+      position: relative;
+      flex-shrink: 0;
+      transition: background 0.15s;
+      user-select: none;
+    }
+
+    .tip:hover { background: var(--blue-mid); }
+
+    .tip::after {
+      content: attr(data-tip);
+      position: absolute;
+      bottom: calc(100% + 9px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--black);
+      color: var(--white);
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 0.73rem;
+      font-weight: 400;
+      line-height: 1.65;
+      white-space: pre-line;
+      width: 240px;
+      text-align: left;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.18s;
+      z-index: 200;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.35);
+    }
+
+    .tip::before {
+      content: '';
+      position: absolute;
+      bottom: calc(100% + 3px);
+      left: 50%;
+      transform: translateX(-50%);
+      border: 6px solid transparent;
+      border-top-color: var(--black);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.18s;
+      z-index: 200;
+    }
+
+    .tip:hover::after,
+    .tip:hover::before { opacity: 1; }
+
+    /* ── Submit ── */
+    .btn-wrap {
+      grid-column: 1 / -1;
+      margin-top: 6px;
+    }
+
+    .btn-predict {
+      width: 100%;
+      padding: 14px;
+      background: var(--blue-dark);
+      color: var(--white);
+      border: none;
+      border-radius: 9px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      font-family: inherit;
+      letter-spacing: 0.02em;
+      cursor: pointer;
+      transition: background 0.18s, transform 0.1s, box-shadow 0.18s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-predict:hover {
+      background: var(--blue-mid);
+      box-shadow: 0 4px 14px rgba(37,99,235,0.35);
+      transform: translateY(-1px);
+    }
+
+    .btn-predict:active { transform: translateY(0); }
+
+    /* ── Result ── */
+    .divider {
+      height: 1px;
+      background: var(--gray-200);
+      margin: 28px 0;
+    }
+
+    .result-card {
+      background: linear-gradient(135deg, var(--blue-dark) 0%, #1d4ed8 100%);
+      border-radius: 12px;
+      padding: 28px 32px;
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      box-shadow: 0 6px 24px rgba(26,58,107,0.28);
+      animation: fadeIn 0.4s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .result-icon-wrap {
+      width: 56px;
+      height: 56px;
+      background: rgba(255,255,255,0.15);
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.8rem;
+      flex-shrink: 0;
+    }
+
+    .result-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #93c5fd;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 4px;
+    }
+
+    .result-value {
+      font-size: 2.2rem;
+      font-weight: 800;
+      color: var(--white);
+      letter-spacing: -0.03em;
+      line-height: 1;
+    }
+
+    .result-note {
+      font-size: 0.78rem;
+      color: rgba(255,255,255,0.55);
+      margin-top: 5px;
+    }
+
+    /* ── Footer ── */
+    footer {
+      text-align: center;
+      padding: 22px 20px;
+      color: var(--gray-400);
+      font-size: 0.78rem;
+    }
+
+    footer span { color: var(--gray-600); font-weight: 500; }
+
+    /* ── Responsive ── */
+    @media (max-width: 700px) {
+      .form-grid { grid-template-columns: 1fr 1fr; }
+      header { padding: 16px 20px; }
+      .card { padding: 24px 20px; }
+      .result-card { padding: 20px; gap: 16px; }
+      .result-value { font-size: 1.8rem; }
+    }
+
+    @media (max-width: 440px) {
+      .form-grid { grid-template-columns: 1fr; }
+      .header-text h1 { font-size: 1.1rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo-wrap">
+      <img src="{{ url_for('static', filename='images/Logo_EAFIT.svg.png') }}" alt="Universidad EAFIT">
+    </div>
+    <div class="header-text">
+      <h1>Trabajo Final CI-CD</h1>
+      <h2>Boston House Price Prediction</h2>
+    </div>
+  </header>
+
+  <main>
+    <div class="card">
+
+      <div class="section-header">
+        <div class="section-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+            <polyline points="9 22 9 12 15 12 15 22"/>
+          </svg>
+        </div>
+        <div>
+          <div class="section-title">Datos de la propiedad</div>
+          <p class="section-hint">
+            Completa los 13 atributos del dataset <strong>Boston Housing</strong>.
+            Pasa el cursor sobre el ícono <strong style="color:var(--blue-mid)">i</strong>
+            para ver la descripción y el rango de valores de cada variable.
+          </p>
+        </div>
+      </div>
+
+      <form action="{{ url_for('predict') }}" method="post">
+        <div class="form-grid">
+
+          <div class="form-group">
+            <label class="form-label">CRIM
+              <span class="tip" data-tip="Tasa de criminalidad per cápita&#10;&#10;Rango: 0.006 – 88.976&#10;Valor bajo → zona más segura">i</span>
+            </label>
+            <input class="form-input" type="number" step="any" name="CRIM" placeholder="ej. 0.00632" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">ZN
+              <span class="tip" data-tip="% de terreno residencial zonificado para lotes > 25,000 ft²&#10;&#10;Rango: 0 – 100&#10;0 = sin grandes lotes residenciales">i</span>
+            </label>
+            <input class="form-input" type="number" step="any" name="ZN" placeholder="ej. 18.0" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">INDUS
+              <span class="tip" data-tip="% de hectáreas de negocio no minorista por ciudad&#10;&#10;Rango: 0.46 – 27.74&#10;Valor alto → zona muy industrial">i</span>
+            </label>
+            <input class="form-input" type="number" step="any" name="INDUS" placeholder="ej. 2.31" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">CHAS
+              <span class="tip" data-tip="Variable binaria: río Charles&#10;&#10;1 = la zona limita con el río&#10;0 = no limita con el río&#10;&#10;Solo admite los valores 0 o 1">i</span>
+            </label>
+            <input class="form-input" type="number" step="1" min="0" max="1" name="CHAS" placeholder="0 o 1" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">NOX
+              <span class="tip" data-tip="Concentración de óxidos de nitrógeno (partes por 10 millones)&#10;&#10;Rango: 0.385 – 0.871&#10;Valor alto → mayor contaminación del aire">i</span>
+            </label>
+            <input class="form-input" type="number" step="any" name="NOX" placeholder="ej. 0.538" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">RM
+              <span class="tip" data-tip="Número promedio de habitaciones por vivienda&#10;&#10;Rango: 3.56 – 8.78&#10;Más habitaciones → mayor valor estimado">i</span>
+            </label>
+            <input class="form-input" type="number" step="any" name="RM" placeholder="ej. 6.575" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">AGE
+              <span class="tip" data-tip="% de unidades ocupadas construidas antes de 1940&#10;&#10;Rango: 2.9 – 100&#10;100 = todas las viviendas son antiguas">i</span>
+            </label>
+            <input class="form-input" type="number" step="any" name="AGE" placeholder="ej. 65.2" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">DIS
+              <span class="tip" data-tip="Distancia ponderada a 5 centros de empleo de Boston&#10;&#10;Rango: 1.13 – 12.13&#10;Mayor valor → más alejado del centro laboral">i</span>
+            </label>
+            <input class="form-input" type="number" step="any" name="DIS" placeholder="ej. 4.09" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">RAD
+              <span class="tip" data-tip="Índice de accesibilidad a autopistas radiales&#10;&#10;Rango: 1 – 24 (enteros)&#10;24 = máxima exposición a autopistas">i</span>
+            </label>
+            <input class="form-input" type="number" step="1" min="1" max="24" name="RAD" placeholder="ej. 1" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">TAX
+              <span class="tip" data-tip="Tasa de impuesto sobre la propiedad por $10,000&#10;&#10;Rango: 187 – 711&#10;Valor bajo → menor carga fiscal">i</span>
+            </label>
+            <input class="form-input" type="number" step="any" name="TAX" placeholder="ej. 296.0" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">PTRATIO
+              <span class="tip" data-tip="Ratio alumnos por maestro en la ciudad&#10;&#10;Rango: 12.6 – 22.0&#10;Valor bajo → mejores escuelas públicas">i</span>
+            </label>
+            <input class="form-input" type="number" step="any" name="PTRATIO" placeholder="ej. 15.3" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">B
+              <span class="tip" data-tip="Índice demográfico: 1000×(Bk − 0.63)²&#10;donde Bk = proporción de residentes negros&#10;&#10;Rango: 0.32 – 396.9">i</span>
+            </label>
+            <input class="form-input" type="number" step="any" name="B" placeholder="ej. 396.9" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">LSTAT
+              <span class="tip" data-tip="% de población de menor estatus socioeconómico&#10;&#10;Rango: 1.73 – 37.97&#10;Valor bajo → zona más acomodada">i</span>
+            </label>
+            <input class="form-input" type="number" step="any" name="LSTAT" placeholder="ej. 4.98" required>
+          </div>
+
+          <div class="btn-wrap">
+            <button type="submit" class="btn-predict">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3">
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+              Generar Predicción
+            </button>
+          </div>
+
+        </div>
+      </form>
+
+      {% if prediction is defined and prediction %}
+      <div class="divider"></div>
+      <div class="result-card">
+        <div class="result-icon-wrap">&#127968;</div>
+        <div>
+          <div class="result-label">Precio estimado de la propiedad</div>
+          <div class="result-value">${{ "{:,.2f}".format(prediction) }}k</div>
+          <div class="result-note">Miles de USD &nbsp;·&nbsp; Base de datos Boston Housing (1978)</div>
+        </div>
+      </div>
+      {% endif %}
+
+    </div>
+  </main>
+
+  <footer>
+    <span>Universidad EAFIT</span> &nbsp;·&nbsp; Materia CI-CD &nbsp;·&nbsp; 2026
+  </footer>
+
+</body>
+</html>
