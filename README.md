@@ -245,4 +245,4 @@ Job 7: smoke-test-prod     ← pytest tests/test_smoke_app.py (contra prod ALB)
 
 ---
 
-## Universidad EAFIT · Materia CI/CD · 2026
+## Universidad EAFIT · Materia CI/CD · 2026!
