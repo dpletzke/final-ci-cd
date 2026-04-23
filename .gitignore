@@ -114,14 +114,15 @@ ci-cd-env/
 # macOS
 .DS_Store
 
-# Claude Code
+# Claude Code (configuración local de la máquina)
 .claude/
+
+# Archivos con credenciales locales (NUNCA subir al repo)
+Docs/llaves_secrets_etc.md
+
 
 # Proyecto de ejemplo (referencia local, no parte del repo)
 proyecto-ejemplo-ci-cd/
-
-# Documentación de desarrollo (no parte del repo)
-Docs/
 
 # Reportes generados por pytest y linters (se suben como artefactos de CI)
 report.html
@@ -130,7 +131,6 @@ flake8-report.txt
 
 # Terraform
 infra/.terraform/
-infra/.terraform.lock.hcl
 infra/terraform.tfstate
 infra/terraform.tfstate.backup
 infra/terraform.tfstate.d/

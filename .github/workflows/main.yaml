@@ -1,59 +1,105 @@
-# Your workflow name.
-name: Deploy to heroku.
+name: CI/CD Pipeline — Boston House Pricing
 
-# Run workflow on every push to main branch.
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
 
-# Your workflows jobs.
 jobs:
-  build:
+  # ─────────────────────────────────────────────────────────────
+  # Job 1: CI — Build, Test, Analyze, Publish Docker Image
+  # ─────────────────────────────────────────────────────────────
+  build-test-publish:
     runs-on: ubuntu-latest
+    outputs:
+      repo_name: ${{ steps.set_outputs.outputs.repo_name }}
+      image_tag: ${{ steps.set_outputs.outputs.image_tag }}
+
     steps:
-      # Check-out your repository.
-      - name: Checkout
-        uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-
-### ⬇ IMPORTANT PART ⬇ ###
-
-      - name: Build, Push and Release a Docker container to Heroku. # Your custom step name
-        uses: gonuit/heroku-docker-deploy@v1.3.3 # GitHub action name (leave it as it is).
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          # Below you must provide variables for your Heroku app.
+          python-version: '3.12'
 
-          # The email address associated with your Heroku account.
-          # If you don't want to use repository secrets (which is recommended) you can do:
-          # email: my.email@example.com
-          email: ${{ secrets.HEROKU_EMAIL }}
-          
-          # Heroku API key associated with provided user's email.
-          # Api Key is available under your Heroku account settings.
-          heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
-          
-          # Name of the heroku application to which the build is to be sent.
-          heroku_app_name: ${{ secrets.HEROKU_APP_NAME }}
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
-          # (Optional, default: "./")
-          # Dockerfile directory.
-          # For example, if you have a Dockerfile in the root of your project, leave it as follows:
-          dockerfile_directory: ./
+      - name: Run Black (Formatter check)
+        run: black app --check
 
-          # (Optional, default: "Dockerfile")
-          # Dockerfile name.
-          dockerfile_name: Dockerfile
+      - name: Run Pylint (Linter)
+        run: pylint app --output-format=text --fail-under=9 > pylint-report.txt || true
 
-          # (Optional, default: "")
-          # Additional options of docker build command.
-          docker_options: "--no-cache"
+      - name: Run Flake8 (Linter)
+        run: flake8 app --output-file=flake8-report.txt || true
 
-          # (Optional, default: "web")
-          # Select the process type for which you want the docker container to be uploaded.
-          # By default, this argument is set to "web".
-          # For more information look at https://devcenter.heroku.com/articles/process-model
-          process_type: web
-          
-   
-          
-### ⬆ IMPORTANT PART ⬆ ###
+      - name: Run Unit Tests with pytest and Coverage
+        run: |
+          pytest --ignore=tests/test_acceptance_app.py --ignore=tests/test_smoke_app.py
+
+      - name: Run Acceptance Tests
+        env:
+          APP_BASE_URL: http://localhost:8000
+        run: |
+          gunicorn --workers=2 --bind=0.0.0.0:8000 app.app:app &
+          sleep 10
+          pytest tests/test_acceptance_app.py --cov-report=xml:acceptance_coverage.xml --html=acceptance_report.html
+
+      - name: Upload Test Reports Artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-reports
+          path: |
+            htmlcov/
+            report.html
+
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarqube-scan-action@v5.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
+
+      - name: Set up QEMU
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        id: docker_build_push
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: |
+            ${{ vars.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ github.sha }}
+            ${{ vars.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Set Job Outputs
+        id: set_outputs
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          echo "repo_name=${{ github.event.repository.name }}" >> $GITHUB_OUTPUT
+          echo "image_tag=${{ github.sha }}" >> $GITHUB_OUTPUT
