@@ -23,13 +23,13 @@ Este documento describe, en orden de ejecución, todos los cambios que deben rea
 | Dockerfile optimizado (port 8000 fijo) | ✅ | ✅ | Completado |
 | `requirements.txt` con herramientas dev | ✅ | ✅ | Completado |
 | `.gitignore` con entradas de Terraform | ✅ | ✅ | Completado |
-| `sonar-project.properties` | ✅ | ❌ | **Pendiente** |
+| `sonar-project.properties` | ✅ | ✅ | **Completado** |
 | Infraestructura Terraform (`infra/`) | ✅ | ❌ | **Pendiente** |
-| Pipeline CI completo (GitHub Actions) | ✅ 7 jobs | ❌ Solo Heroku | **Pendiente** |
-| Docker Hub como registro de imágenes | ✅ | ❌ Usa Heroku | **Pendiente** |
+| Pipeline CI completo (GitHub Actions) | ✅ 7 jobs | ⚠️ Job 1 ✅ | **Jobs 2–7 pendientes (Fase CD)** |
+| Docker Hub como registro de imágenes | ✅ | ✅ | **Completado** |
 | Entorno Staging (ECS Fargate) | ✅ | ❌ | **Pendiente** |
 | Entorno Production (ECS Fargate) | ✅ | ❌ | **Pendiente** |
-| Secrets AWS + SonarCloud + DockerHub | ✅ | ❌ Solo Heroku | **Pendiente** |
+| Secrets AWS + SonarCloud + DockerHub | ✅ | ⚠️ | **CI ✅ — AWS + Terraform ❌** |
 | `Procfile` (Heroku) | ❌ No lo usa | ❌ Eliminado | Completado |
 
 ---
@@ -200,11 +200,9 @@ flake8 app
 
 ---
 
-### ❌ Paso 7 — Configurar SonarCloud
+### ✅ Paso 7 — Configurar SonarCloud
 
-**Estado: PENDIENTE**
-
-SonarCloud analiza continuamente la calidad del código: cobertura, bugs, vulnerabilidades de seguridad, code smells y hotspots.
+**Estado: COMPLETADO** — `sonar-project.properties` creado con `projectKey=AlexanderPelaezJimenez_final-ci-cd` y `organization=alexanderpelaezjimenez`. Pipeline analizando correctamente, Quality Gate pasando. Se resolvieron dos issues: Blocker `S8392` (`host="0.0.0.0"` → `127.0.0.1`) y Hotspot CSRF marcado como "Safe" en el dashboard de SonarCloud.
 
 **7.1 Crear cuenta y proyecto en SonarCloud:**
 1. Ir a [sonarcloud.io](https://sonarcloud.io/) e iniciar sesión con la cuenta de GitHub
@@ -249,9 +247,14 @@ El `.gitignore` incluye:
 
 ---
 
-### ❌ Paso 9 — Reemplazar el workflow de CI en GitHub Actions
+### ✅ Paso 9 — Reemplazar el workflow de CI en GitHub Actions
 
-**Estado: PENDIENTE** — El archivo `.github/workflows/main.yaml` actual contiene el pipeline legacy de Heroku. Debe reemplazarse con el Job 1 del pipeline completo:
+**Estado: COMPLETADO** — Pipeline CI (Job 1) desplegado y pasando en GitHub Actions (commit `234056b`). El workflow implementado sigue fielmente el ejemplo del Taller-Entregable-2, con tres adiciones propias del proyecto:
+1. El step de acceptance tests incluye `--ignore=tests/test_smoke_app.py` (porque este proyecto tiene smoke tests separados)
+2. El step SonarCloud incluye `SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}` (configurado como variable de repositorio)
+3. Se agrega el step `Set Job Outputs` al final para exponer `repo_name` e `image_tag` a los jobs de CD (Pasos 10–11)
+
+El workflow real está en `.github/workflows/main.yaml`. El YAML a continuación es el borrador de referencia:
 
 ```yaml
 name: CI/CD Pipeline — Boston House Pricing
@@ -888,9 +891,19 @@ resource "aws_ecs_service" "main" {
 
 ---
 
-### ❌ Paso 12 — Configurar Secrets y Variables en GitHub
+### ⚠️ Paso 12 — Configurar Secrets y Variables en GitHub
 
-**Estado: PENDIENTE**
+**Estado: PARCIALMENTE COMPLETADO** — Los secrets y variables necesarios para la Fase CI (Job 1) ya están configurados. Faltan los de la Fase CD (Jobs 2–7 con AWS y Terraform).
+
+**Ya configurados ✅ (CI funcionando):**
+- Secrets: `SONAR_TOKEN`, `DOCKERHUB_TOKEN`
+- Variables: `DOCKERHUB_USERNAME`, `SONAR_HOST_URL`
+
+**Pendientes ❌ (necesarios para Fase CD):**
+- Secrets: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN`, `SECRET_KEY`
+- Variables: `TF_STATE_BUCKET`, `LAB_ROLE_ARN`, `VPC_ID`, `SUBNET_IDS`
+
+> **CRÍTICO:** Los secrets de AWS Academy **expiran cada 4 horas**. Deben actualizarse en GitHub cada vez que se haga Start Lab antes de correr el pipeline de CD.
 
 Ir a GitHub → repositorio → **Settings → Secrets and variables → Actions**.
 
@@ -982,11 +995,11 @@ python -m app.app
 | `front/home.html` | CORREGIR (`name="Age"` → `name="AGE"`) | ✅ Completado |
 | `app.py` (raíz) | ELIMINAR | ✅ Completado |
 | `Procfile` | ELIMINAR | ✅ Completado |
-| `sonar-project.properties` | CREAR | ❌ Pendiente |
+| `sonar-project.properties` | CREAR | ✅ Completado |
 | `infra/main.tf` | CREAR | ❌ Pendiente |
 | `infra/variables.tf` | CREAR | ❌ Pendiente |
 | `infra/outputs.tf` | CREAR | ❌ Pendiente |
-| `.github/workflows/main.yaml` | REEMPLAZAR | ❌ Pendiente |
+| `.github/workflows/main.yaml` | REEMPLAZAR | ✅ Completado (Job 1 CI) — Jobs 2–7 pendientes |
 
 
 # Archivos de referencia
@@ -999,4 +1012,4 @@ https://github.com/danielr9911/cicd-workshops/blob/main/Taller-Entregable3.md
 
 ---
 
-*Documento actualizado el 2026-04-21 | Universidad EAFIT — Materia CI/CD*
+*Documento actualizado el 2026-04-23 | Universidad EAFIT — Materia CI/CD*
