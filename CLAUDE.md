@@ -16,28 +16,62 @@ pipeline CI/CD completo: GitHub Actions → Docker Hub → AWS ECS Fargate via T
 
 ---
 
-## Estado actual del proyecto
+## Estado actual del proyecto (actualizado 2026-04-23)
 
-### Completado (Fase A — CI)
+### ✅ Completado — Fase A (CI — Job 1)
+
 - App Flask como paquete `app/` con `predictor.py` separado
 - 13 tests unitarios + tests Selenium de aceptación y humo
 - Calidad: Black ✅ | Pylint 10.00/10 ✅ | Flake8 ✅ | Cobertura 95% ✅
 - Dockerfile (python:3.12-slim, Gunicorn, puerto 8000)
 - `pytest.ini`, `.flake8`, `.dockerignore`, `.gitignore`
+- `sonar-project.properties` creado y funcionando (`projectKey=AlexanderPelaezJimenez_final-ci-cd`)
+- `.github/workflows/main.yaml` — Job 1 CI completo y pasando en GitHub Actions
+- Docker Hub publicando imagen con tags `:latest` y `:<git-sha>` en cada push a `main`
+- SonarCloud Quality Gate pasando — se resolvió Blocker S8392 y Hotspot CSRF
 
-### Pendiente (Fase B — CD)
+### Secrets y variables ya configurados en GitHub ✅
+| Tipo | Nombre | Estado |
+|------|--------|--------|
+| Secret | `SONAR_TOKEN` | ✅ Configurado |
+| Secret | `DOCKERHUB_TOKEN` | ✅ Configurado |
+| Variable | `DOCKERHUB_USERNAME` | ✅ Configurado |
+| Variable | `SONAR_HOST_URL` | ✅ Configurado |
+
+### ❌ Pendiente — Fase B (CD — Jobs 2–7)
 
 | Paso | Tarea | Archivo |
 |------|-------|---------|
-| 7 | Crear configuración de SonarCloud | `sonar-project.properties` |
-| 9 | Reemplazar workflow legacy de Heroku con pipeline de 7 jobs | `.github/workflows/main.yaml` |
 | 10 | Crear infraestructura Terraform (ECS Fargate + ALB) | `infra/main.tf`, `infra/variables.tf`, `infra/outputs.tf` |
 | 11 | Agregar Jobs 2–7 al workflow (staging + prod) | `.github/workflows/main.yaml` |
-| 12 | Configurar Secrets y Variables en GitHub | Manual |
-| 13 | Verificar pipeline completo | Manual |
+| 12 | Configurar Secrets/Variables AWS en GitHub (manual) | Ver tabla abajo |
+| 13 | Verificar pipeline completo end-to-end | Manual |
 
-> El código completo de todos los archivos pendientes está en `Docs/pasos_a_seguir_v1.md`.
-> Las decisiones de arquitectura están documentadas en `Docs/decisiones_de_arquitectura.md`.
+### Secrets y variables pendientes para Fase CD ❌
+| Tipo | Nombre | Descripción |
+|------|--------|-------------|
+| Secret | `AWS_ACCESS_KEY_ID` | AWS Academy → Start Lab → AWS Details (expira cada 4h) |
+| Secret | `AWS_SECRET_ACCESS_KEY` | Mismo lugar |
+| Secret | `AWS_SESSION_TOKEN` | Mismo lugar (renovar con Start Lab antes de cada run) |
+| Secret | `SECRET_KEY` | `python -c "import secrets; print(secrets.token_hex(32))"` |
+| Variable | `TF_STATE_BUCKET` | Nombre único del bucket S3 para estado Terraform |
+| Variable | `LAB_ROLE_ARN` | ARN del LabRole en AWS Academy → IAM → Roles |
+| Variable | `VPC_ID` | ID de la VPC por defecto en AWS → VPC → Your VPCs |
+| Variable | `SUBNET_IDS` | IDs de 2 subredes públicas separadas por coma |
+
+> El código completo de los archivos Terraform y Jobs 2–7 está listo en `Docs/pasos_a_seguir_v1.md` (Pasos 10 y 11).
+
+---
+
+## Próximo paso para continuar
+
+**Empezar por el Paso 10:** crear los tres archivos en `infra/`:
+- `infra/variables.tf`
+- `infra/outputs.tf`
+- `infra/main.tf`
+
+El contenido completo ya está documentado en `Docs/pasos_a_seguir_v1.md` sección "Paso 10".
+Después del Paso 10 viene el Paso 11 (Jobs 2–7 en el workflow) y luego configurar los secrets AWS.
 
 ---
 
@@ -46,7 +80,7 @@ pipeline CI/CD completo: GitHub Actions → Docker Hub → AWS ECS Fargate via T
 ```
 push a main
      │
-Job 1: build-test-publish
+Job 1: build-test-publish   ← COMPLETADO Y PASANDO
   Black → Pylint → Flake8 → pytest → SonarCloud → Docker Hub
      │
 Job 2: deploy-tf-staging      (Terraform apply staging)
@@ -76,24 +110,12 @@ Job 7: smoke-test-prod        (Selenium smoke tests vs ALB producción)
 
 ---
 
-## Secrets requeridos en GitHub Actions
+## Problemas ya resueltos (no repetir)
 
-| Secret | Descripción |
-|--------|-------------|
-| `AWS_ACCESS_KEY_ID` | AWS Academy (expira cada 4h — renovar con Start Lab) |
-| `AWS_SECRET_ACCESS_KEY` | AWS Academy |
-| `AWS_SESSION_TOKEN` | AWS Academy |
-| `SONAR_TOKEN` | SonarCloud → My Account → Security |
-| `DOCKERHUB_TOKEN` | Docker Hub → Account → Security |
-| `SECRET_KEY` | `python -c "import secrets; print(secrets.token_hex(32))"` |
-
-| Variable | Ejemplo |
-|----------|---------|
-| `DOCKERHUB_USERNAME` | usuario de Docker Hub |
-| `TF_STATE_BUCKET` | nombre único del bucket S3 |
-| `LAB_ROLE_ARN` | ARN del LabRole en AWS Academy |
-| `VPC_ID` | ID de la VPC por defecto |
-| `SUBNET_IDS` | IDs de 2 subredes públicas separadas por coma |
+- **Test aceptación `result_text` vacío** → se cambió `presence_of_element_located` por `visibility_of_element_located` en `tests/test_acceptance_app.py` (la animación CSS `fadeIn` causaba race condition)
+- **SonarCloud Blocker S8392** → `host="0.0.0.0"` cambiado a `host="127.0.0.1"` en bloque `__main__` de `app/app.py` (no afecta Gunicorn en CI/prod)
+- **SonarCloud Hotspot CSRF** → marcado como "Safe" en el dashboard de SonarCloud (app sin autenticación ni operaciones sensibles)
+- **GitHub push protection** bloqueó un push por token Docker Hub en `Docs/llaves_secrets_etc.md` → archivo excluido con `git rm --cached` y añadido a `.gitignore`
 
 ---
 
