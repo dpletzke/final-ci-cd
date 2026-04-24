@@ -4,6 +4,7 @@ import os
 
 from flask import Flask, jsonify, render_template, request
 
+from .metrics import init_metrics
 from .predictor import FEATURE_ORDER, predict_from_dict, predict_from_list
 
 _ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -14,6 +15,7 @@ app = Flask(
     static_folder=os.path.join(_ROOT_DIR, "static"),
 )
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "dev-only-insecure-key")
+init_metrics(app)
 
 
 @app.route("/", methods=["GET"])

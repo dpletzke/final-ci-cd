@@ -7,6 +7,8 @@ import threading
 import mlflow
 import numpy as np
 
+from .metrics import MLFLOW_LOG_FAILURES, PREDICTED_PRICE, PREDICTIONS
+
 FEATURE_ORDER = [
     "CRIM",
     "ZN",
@@ -56,7 +58,7 @@ def _log_prediction(features: list, prediction: float, source: str) -> None:
                 mlflow.log_metric("predicted_price", prediction)
                 mlflow.set_tags({"environment": _ENVIRONMENT, "source": source})
         except Exception:  # pylint: disable=broad-except
-            pass  # MLflow logging is non-critical — never break a prediction
+            MLFLOW_LOG_FAILURES.labels(environment=_ENVIRONMENT).inc()
 
     threading.Thread(target=_do_log, daemon=True).start()
 
@@ -65,6 +67,8 @@ def predict_from_list(features: list, source: str = "api") -> float:
     """Return the predicted price given 13 feature values in FEATURE_ORDER."""
     scaled = _scalar.transform(np.array(features).reshape(1, -1))
     result = round(float(_regmodel.predict(scaled)[0]), 2)
+    PREDICTIONS.labels(source=source, environment=_ENVIRONMENT).inc()
+    PREDICTED_PRICE.labels(source=source, environment=_ENVIRONMENT).set(result)
     _log_prediction(features, result, source)
     return result
 

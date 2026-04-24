@@ -1,0 +1,65 @@
+services:
+  app:
+    build: .
+    container_name: boston-house-app
+    command: ["gunicorn", "--workers=1", "--bind=0.0.0.0:8000", "app.app:app"]
+    environment:
+      ENVIRONMENT: local
+      MLFLOW_TRACKING_URI: http://mlflow:5000/
+      MLFLOW_HTTP_REQUEST_TIMEOUT: "5"
+    ports:
+      - "8000:8000"
+    depends_on:
+      - mlflow
+
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v3.11.1
+    container_name: boston-mlflow
+    environment:
+      MLFLOW_SERVER_ALLOWED_HOSTS: localhost,localhost:*,127.0.0.1,127.0.0.1:*,mlflow,mlflow:5000,boston-mlflow,boston-mlflow:5000
+    command:
+      - "mlflow"
+      - "server"
+      - "--host"
+      - "0.0.0.0"
+      - "--port"
+      - "5000"
+      - "--backend-store-uri"
+      - "sqlite:////mlflow/mlflow.db"
+      - "--default-artifact-root"
+      - "/mlflow/artifacts"
+    ports:
+      - "5001:5000"
+    volumes:
+      - mlflow-data:/mlflow
+
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    container_name: boston-prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    depends_on:
+      - app
+
+  grafana:
+    image: grafana/grafana:11.4.0
+    container_name: boston-grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - prometheus
+
+volumes:
+  mlflow-data:

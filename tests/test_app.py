@@ -26,6 +26,14 @@ def test_health_endpoint(client):
     assert response.data == b"OK"
 
 
+def test_metrics_endpoint_exposes_prometheus_metrics(client):
+    """GET /metrics exposes Prometheus app metrics."""
+    response = client.get("/metrics")
+    assert response.status_code == 200
+    assert b"boston_http_requests_total" in response.data
+    assert b"boston_prediction_total" in response.data
+
+
 def test_predict_api_returns_positive_float(client):
     """POST /predict_api with valid data returns a positive float."""
     payload = {
