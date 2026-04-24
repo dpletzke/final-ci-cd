@@ -47,3 +47,16 @@ variable "secret_key" {
   sensitive   = true
   default     = "dev-only-insecure-key"
 }
+
+variable "grafana_admin_user" {
+  description = "Usuario administrador inicial de Grafana."
+  type        = string
+  default     = "admin"
+}
+
+variable "grafana_admin_password" {
+  description = "Password administrador inicial de Grafana. Debe venir desde GitHub Secrets en CI/CD."
+  type        = string
+  sensitive   = true
+  default     = "admin"
+}
