@@ -2,6 +2,7 @@
 
 import os
 import pickle
+import threading
 
 import mlflow
 import numpy as np
@@ -27,7 +28,6 @@ _ENVIRONMENT = os.environ.get("ENVIRONMENT", "local")
 
 if _MLFLOW_URI:
     mlflow.set_tracking_uri(_MLFLOW_URI)
-    mlflow.set_experiment("boston-house-predictions")
 
 
 def _load_models():
@@ -44,16 +44,21 @@ _regmodel, _scalar = _load_models()
 
 
 def _log_prediction(features: list, prediction: float, source: str) -> None:
-    """Log a prediction run to MLflow if a tracking URI is configured."""
+    """Log a prediction run to MLflow in a background thread (non-blocking)."""
     if not _MLFLOW_URI:
         return
-    try:
-        with mlflow.start_run():
-            mlflow.log_params(dict(zip(FEATURE_ORDER, features)))
-            mlflow.log_metric("predicted_price", prediction)
-            mlflow.set_tags({"environment": _ENVIRONMENT, "source": source})
-    except Exception:  # pylint: disable=broad-except
-        pass  # MLflow logging is non-critical — never break a prediction
+
+    def _do_log() -> None:
+        try:
+            mlflow.set_experiment("boston-house-predictions")
+            with mlflow.start_run():
+                mlflow.log_params(dict(zip(FEATURE_ORDER, features)))
+                mlflow.log_metric("predicted_price", prediction)
+                mlflow.set_tags({"environment": _ENVIRONMENT, "source": source})
+        except Exception:  # pylint: disable=broad-except
+            pass  # MLflow logging is non-critical — never break a prediction
+
+    threading.Thread(target=_do_log, daemon=True).start()
 
 
 def predict_from_list(features: list, source: str = "api") -> float:

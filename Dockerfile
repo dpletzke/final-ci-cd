@@ -20,4 +20,4 @@ COPY . .
 EXPOSE 8000
 
 # app.app:app = paquete app/, módulo app.py, objeto Flask llamado app
-CMD ["gunicorn", "--workers=4", "--bind=0.0.0.0:8000", "app.app:app"]
+CMD ["gunicorn", "--workers=2", "--bind=0.0.0.0:8000", "app.app:app"]

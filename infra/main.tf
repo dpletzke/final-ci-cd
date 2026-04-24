@@ -118,7 +118,7 @@ resource "aws_ecs_task_definition" "app" {
   requires_compatibilities = ["FARGATE"]
   network_mode             = "awsvpc"
   cpu                      = "256"
-  memory                   = "512"
+  memory                   = "2048"
   task_role_arn            = var.lab_role_arn
   execution_role_arn       = var.lab_role_arn
 
@@ -132,9 +132,10 @@ resource "aws_ecs_task_definition" "app" {
       ]
 
       environment = [
-        { name = "FLASK_SECRET_KEY",    value = var.secret_key },
-        { name = "MLFLOW_TRACKING_URI", value = "http://${aws_lb.mlflow.dns_name}/" },
-        { name = "ENVIRONMENT",         value = var.environment_name }
+        { name = "FLASK_SECRET_KEY",            value = var.secret_key },
+        { name = "MLFLOW_TRACKING_URI",         value = "http://${aws_lb.mlflow.dns_name}/" },
+        { name = "ENVIRONMENT",                 value = var.environment_name },
+        { name = "MLFLOW_HTTP_REQUEST_TIMEOUT", value = "5" }
       ]
 
       logConfiguration = {
