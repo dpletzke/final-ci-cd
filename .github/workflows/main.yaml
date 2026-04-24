@@ -7,6 +7,9 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   # ─────────────────────────────────────────────────────────────
   # Job 1: CI — Build, Test, Analyze, Publish Docker Image
@@ -430,9 +433,9 @@ jobs:
       - name: Tag production release
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
+          VERSION="${{ needs.build-test-publish.outputs.image_tag }}"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          VERSION="${{ needs.build-test-publish.outputs.image_tag }}"
           git tag -a "$VERSION" -m "Release $VERSION (production verified)"
           git push origin "$VERSION"
 
