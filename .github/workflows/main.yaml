@@ -434,7 +434,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           VERSION="${{ needs.build-test-publish.outputs.image_tag }}"
           git tag -a "$VERSION" -m "Release $VERSION (production verified)"
-          git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} "$VERSION"
+          git push origin "$VERSION"
 
   # ─────────────────────────────────────────────────────────────
   # Job 8: Rollback Production if Smoke Tests Failed
