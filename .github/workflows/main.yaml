@@ -404,7 +404,7 @@ jobs:
   # Job 7: Pruebas de humo en Producción
   # ─────────────────────────────────────────────────────────────
   smoke-test-prod:
-    needs: [update-service-prod, deploy-tf-prod]
+    needs: [build-test-publish, update-service-prod, deploy-tf-prod]
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
