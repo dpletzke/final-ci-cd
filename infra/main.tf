@@ -118,7 +118,7 @@ resource "aws_ecs_task_definition" "app" {
   requires_compatibilities = ["FARGATE"]
   network_mode             = "awsvpc"
   cpu                      = "256"
-  memory                   = "512"
+  memory                   = "2048"
   task_role_arn            = var.lab_role_arn
   execution_role_arn       = var.lab_role_arn
 
