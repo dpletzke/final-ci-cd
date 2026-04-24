@@ -16,3 +16,4 @@ selenium
 webdriver-manager
 locust
 mlflow==3.11.1
+prometheus-client==0.22.1

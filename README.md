@@ -110,6 +110,41 @@ La aplicación estará disponible en `http://localhost:8000`.
 
 ---
 
+## Monitoreo local con Prometheus y Grafana
+
+La aplicacion expone metricas Prometheus en `http://localhost:8000/metrics`.
+
+Para levantar la app con Prometheus y Grafana:
+
+```bash
+docker compose -f docker-compose.monitoring.yml up --build
+```
+
+Servicios locales:
+
+| Servicio | URL |
+|---|---|
+| App Flask | `http://localhost:8000` |
+| MLflow | `http://localhost:5001` |
+| Prometheus | `http://localhost:9090` |
+| Grafana | `http://localhost:3000` |
+
+Credenciales de Grafana: `admin` / `admin`.
+
+El dashboard provisionado se llama **Boston House App Monitoring** e incluye:
+
+| Panel | Consulta base |
+|---|---|
+| Total HTTP Request Rate | `sum(rate(boston_http_requests_total[5m]))` |
+| Latency p95 by Endpoint and Method | `histogram_quantile(0.95, sum by (le, endpoint, method) (rate(boston_http_request_duration_seconds_bucket[5m])))` |
+| Total Predictions | `sum(boston_prediction_total)` |
+| MLflow Log Failures | `sum(boston_mlflow_log_failures_total)` |
+| App Up | `max(up{job="boston-house-app"})` |
+| Prediction Throughput | `sum by (source) (rate(boston_prediction_total[5m]))` |
+| Latest Predicted Price | `boston_predicted_price` |
+
+---
+
 ## Endpoints
 
 ### `GET /`
