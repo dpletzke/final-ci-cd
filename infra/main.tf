@@ -2,7 +2,7 @@
 
 terraform {
   required_version = ">= 1.6.0"
-  backend "s3" {}
+  # backend "s3" {}
 
   required_providers {
     aws = {
@@ -17,18 +17,18 @@ provider "aws" {
 }
 
 resource "aws_cloudwatch_log_group" "ecs_logs" {
-  name              = "/ecs/boston-${var.environment_name}-task"
+  name              = "/ecs/${var.project_name}-${var.environment_name}-task"
   retention_in_days = 7
-  tags = { Environment = var.environment_name }
+  tags              = { Environment = var.environment_name }
 }
 
 resource "aws_ecs_cluster" "main" {
-  name = "boston-${var.environment_name}-cluster"
+  name = "${var.project_name}-${var.environment_name}-cluster"
   tags = { Environment = var.environment_name }
 }
 
 resource "aws_security_group" "alb_sg" {
-  name        = "boston-alb-sg-${var.environment_name}"
+  name        = "${var.project_name}-alb-sg-${var.environment_name}"
   description = "Permite trafico HTTP al ALB"
   vpc_id      = var.vpc_id
 
@@ -50,7 +50,7 @@ resource "aws_security_group" "alb_sg" {
 }
 
 resource "aws_security_group" "ecs_sg" {
-  name        = "boston-ecs-sg-${var.environment_name}"
+  name        = "${var.project_name}-ecs-sg-${var.environment_name}"
   description = "Permite trafico desde el ALB al contenedor"
   vpc_id      = var.vpc_id
 
@@ -72,16 +72,16 @@ resource "aws_security_group" "ecs_sg" {
 }
 
 resource "aws_lb" "main" {
-  name               = "boston-${var.environment_name}-alb"
+  name               = "${var.project_name}-${var.environment_name}-alb"
   internal           = false
   load_balancer_type = "application"
   security_groups    = [aws_security_group.alb_sg.id]
   subnets            = var.subnet_ids
-  tags = { Environment = var.environment_name }
+  tags               = { Environment = var.environment_name }
 }
 
 resource "aws_lb_target_group" "ecs_tg" {
-  name        = "boston-tg-${var.environment_name}"
+  name        = "${var.project_name}-tg-${var.environment_name}"
   port        = 8000
   protocol    = "HTTP"
   vpc_id      = var.vpc_id
@@ -114,7 +114,7 @@ resource "aws_lb_listener" "http" {
 }
 
 resource "aws_ecs_task_definition" "app" {
-  family                   = "boston-${var.environment_name}-task"
+  family                   = "${var.project_name}-${var.environment_name}-task"
   requires_compatibilities = ["FARGATE"]
   network_mode             = "awsvpc"
   cpu                      = "256"
@@ -124,7 +124,7 @@ resource "aws_ecs_task_definition" "app" {
 
   container_definitions = jsonencode([
     {
-      name  = "boston-${var.environment_name}-container"
+      name  = "${var.project_name}-${var.environment_name}-container"
       image = var.docker_image_uri
 
       portMappings = [
@@ -150,7 +150,7 @@ resource "aws_ecs_task_definition" "app" {
 }
 
 resource "aws_ecs_service" "main" {
-  name            = "boston-${var.environment_name}-service"
+  name            = "${var.project_name}-${var.environment_name}-service"
   cluster         = aws_ecs_cluster.main.id
   task_definition = aws_ecs_task_definition.app.arn
   desired_count   = 1
@@ -164,7 +164,7 @@ resource "aws_ecs_service" "main" {
 
   load_balancer {
     target_group_arn = aws_lb_target_group.ecs_tg.arn
-    container_name   = "boston-${var.environment_name}-container"
+    container_name   = "${var.project_name}-${var.environment_name}-container"
     container_port   = 8000
   }
 
@@ -176,5 +176,5 @@ resource "aws_ecs_service" "main" {
   }
 
   depends_on = [aws_lb_listener.http]
-  tags = { Environment = var.environment_name }
+  tags       = { Environment = var.environment_name }
 }
