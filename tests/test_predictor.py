@@ -1,4 +1,5 @@
 # tests/test_predictor.py
+import time
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -95,6 +96,7 @@ def test_mlflow_logging_called_when_uri_configured():
     ):
         result = predict_from_list(_SAMPLE, source="web_form")
         assert result > 0
+        time.sleep(0.05)  # allow background logging thread to complete
         mock_params.assert_called_once()
         mock_metric.assert_called_once_with("predicted_price", result)
 
