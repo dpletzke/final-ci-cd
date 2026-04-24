@@ -27,7 +27,6 @@ _ENVIRONMENT = os.environ.get("ENVIRONMENT", "local")
 
 if _MLFLOW_URI:
     mlflow.set_tracking_uri(_MLFLOW_URI)
-    mlflow.set_experiment("boston-house-predictions")
 
 
 def _load_models():
@@ -48,6 +47,7 @@ def _log_prediction(features: list, prediction: float, source: str) -> None:
     if not _MLFLOW_URI:
         return
     try:
+        mlflow.set_experiment("boston-house-predictions")
         with mlflow.start_run():
             mlflow.log_params(dict(zip(FEATURE_ORDER, features)))
             mlflow.log_metric("predicted_price", prediction)

@@ -85,6 +85,8 @@ def test_mlflow_logging_called_when_uri_configured():
     mock_run.__exit__ = MagicMock(return_value=False)
 
     with patch("app.predictor._MLFLOW_URI", "http://fake-mlflow:5000/"), patch(
+        "mlflow.set_experiment"
+    ), patch(
         "mlflow.start_run", return_value=mock_run
     ), patch("mlflow.log_params") as mock_params, patch(
         "mlflow.log_metric"
@@ -100,7 +102,7 @@ def test_mlflow_logging_called_when_uri_configured():
 def test_mlflow_failure_does_not_break_prediction():
     """predict_from_list returns a value even if MLflow logging raises."""
     with patch("app.predictor._MLFLOW_URI", "http://fake-mlflow:5000/"), patch(
-        "mlflow.start_run", side_effect=Exception("MLflow unavailable")
+        "mlflow.set_experiment", side_effect=Exception("MLflow unavailable")
     ):
         result = predict_from_list(_SAMPLE)
         assert isinstance(result, float)
