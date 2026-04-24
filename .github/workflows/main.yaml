@@ -120,15 +120,6 @@ jobs:
         run: |
           echo "repo_name=${{ github.event.repository.name }}" >> $GITHUB_OUTPUT
           echo "image_tag=${{ steps.semver.outputs.version }}" >> $GITHUB_OUTPUT
-
-      - name: Push semver git tag
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag -a "${{ steps.semver.outputs.version }}" -m "Release ${{ steps.semver.outputs.version }}"
-          git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} \
-            "${{ steps.semver.outputs.version }}"
   # ─────────────────────────────────────────────────────────────
   # Job 2: Deploy Terraform Staging
   # ─────────────────────────────────────────────────────────────
@@ -282,8 +273,7 @@ jobs:
             --locustfile tests/locustfile.py \
             --html locust-report.html \
             --csv locust-report \
-            --exit-code-on-error 1 \
-            --percentile 95
+            --exit-code-on-error 1
 
       - name: Check Performance Thresholds
         run: python tests/check_locust_results.py
@@ -436,6 +426,15 @@ jobs:
         run: |
           sleep 30
           pytest tests/test_smoke_app.py
+
+      - name: Tag production release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          VERSION="${{ needs.build-test-publish.outputs.image_tag }}"
+          git tag -a "$VERSION" -m "Release $VERSION (production verified)"
+          git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} "$VERSION"
 
   # ─────────────────────────────────────────────────────────────
   # Job 8: Rollback Production if Smoke Tests Failed
