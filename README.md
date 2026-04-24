@@ -1,6 +1,6 @@
 # Trabajo Final CI/CD — Boston House Price Prediction
 
-Aplicación web de predicción de precios de vivienda desarrollada como proyecto final de la materia **CI/CD** en la **Universidad EAFIT**. El modelo de regresión lineal fue entrenado sobre el dataset *Boston Housing* y se sirve mediante una API REST construida con Flask, con pipeline de integración y entrega continua vía GitHub Actions y contenedores Docker.
+Aplicación web de predicción de precios de vivienda desarrollada como proyecto final de la materia **CI/CD** en la **Universidad EAFIT**. El modelo de regresión lineal fue entrenado sobre el dataset *Boston Housing* y se sirve mediante una API REST construida con Flask, con pipeline de integración y entrega continua vía GitHub Actions, contenedores Docker y despliegue en AWS ECS Fargate con monitoreo MLflow.
 
 ---
 
@@ -10,12 +10,17 @@ Aplicación web de predicción de precios de vivienda desarrollada como proyecto
 boston_house_pricing/
 ├── .github/
 │   └── workflows/
-│       └── main.yaml          <- Pipeline CI/CD
+│       └── main.yaml          <- Pipeline CI/CD (7 jobs)
 │
 ├── app/                       <- Paquete Python de la aplicación
 │   ├── __init__.py            <- Marca el directorio como paquete
 │   ├── app.py                 <- Rutas Flask (/, /health, /predict, /predict_api)
-│   └── predictor.py           <- Lógica de predicción ML (separada de las rutas)
+│   └── predictor.py           <- Lógica de predicción ML + integración MLflow
+│
+├── infra/                     <- Infraestructura como código (Terraform)
+│   ├── main.tf                <- ECS Fargate, ALB, Security Groups, MLflow server
+│   ├── variables.tf           <- Variables de entrada (entorno, imagen, VPC, etc.)
+│   └── outputs.tf             <- Salidas: ALB URL, cluster/service names, MLflow URL
 │
 ├── models/                    <- Artefactos del modelo entrenado
 │   ├── regmodel.pkl           <- Modelo de regresión lineal serializado
@@ -23,7 +28,7 @@ boston_house_pricing/
 │
 ├── tests/                     <- Suite de pruebas
 │   ├── test_app.py            <- Tests unitarios de rutas Flask (5 tests)
-│   ├── test_predictor.py      <- Tests unitarios de lógica ML (8 tests)
+│   ├── test_predictor.py      <- Tests unitarios de lógica ML + MLflow (10 tests)
 │   ├── test_acceptance_app.py <- Tests de aceptación Selenium (staging)
 │   └── test_smoke_app.py      <- Tests de humo Selenium (producción)
 │
@@ -56,8 +61,9 @@ boston_house_pricing/
 | Servidor WSGI | Gunicorn 23.0.0 |
 | Contenedor | Docker (Python 3.12-slim) |
 | Registro de imágenes | Docker Hub |
-| CI/CD | GitHub Actions |
-| Infraestructura (target) | AWS ECS Fargate + ALB (vía Terraform) |
+| CI/CD | GitHub Actions (7 jobs) |
+| Infraestructura | AWS ECS Fargate + ALB (vía Terraform) |
+| Monitoreo ML | MLflow 3.11.1 (tracking server en ECS Fargate) |
 | Calidad de código | Black · Pylint · Flake8 |
 | Testing | pytest · pytest-cov · Selenium |
 | Análisis estático | SonarCloud |
@@ -157,14 +163,15 @@ flake8 app
 > contra los entornos de staging y producción respectivamente, usando la variable de entorno
 > `APP_BASE_URL`.
 
-### Resultados locales actuales
+### Resultados actuales
 | Check | Resultado |
 |---|---|
 | Black | ✅ Sin cambios |
 | Pylint | ✅ 10.00/10 |
 | Flake8 | ✅ Sin errores |
-| pytest (13 tests unitarios) | ✅ 13/13 PASSED |
-| Cobertura | ✅ 95% |
+| pytest (15 tests unitarios) | ✅ 15/15 PASSED |
+| Cobertura | ✅ ~92% |
+| SonarCloud Quality Gate | ✅ Pasando |
 
 ---
 
@@ -190,9 +197,7 @@ flake8 app
 
 ## Pipeline CI/CD
 
-### Estado actual — Pipeline en progreso
-
-El pipeline objetivo es de **7 jobs** organizado en dos fases:
+El pipeline completo consta de **7 jobs** organizados en dos fases:
 
 ```
 push a main
@@ -201,16 +206,16 @@ push a main
 Job 1: build-test-publish  ← Black + Pylint + Flake8 + pytest + SonarCloud + Docker Hub
      │
      ▼
-Job 2: deploy-tf-staging   ← Terraform apply (staging en AWS ECS Fargate)
+Job 2: deploy-tf-staging   ← Terraform apply (staging en AWS ECS Fargate + MLflow)
      │
      ▼
 Job 3: update-service-staging  ← aws ecs update-service + wait
      │
      ▼
 Job 4: test-staging        ← pytest tests/test_acceptance_app.py (contra staging ALB)
-     │
+     │  (solo si Job 4 pasa)
      ▼
-Job 5: deploy-tf-prod      ← Terraform apply (producción en AWS ECS Fargate)
+Job 5: deploy-tf-prod      ← Terraform apply (producción en AWS ECS Fargate + MLflow)
      │
      ▼
 Job 6: update-service-prod ← aws ecs update-service + wait
@@ -219,10 +224,7 @@ Job 6: update-service-prod ← aws ecs update-service + wait
 Job 7: smoke-test-prod     ← pytest tests/test_smoke_app.py (contra prod ALB)
 ```
 
-> El workflow actual (`.github/workflows/main.yaml`) todavía usa el pipeline legacy de Heroku.
-> La migración al pipeline completo de 7 jobs es el próximo paso pendiente de implementación.
-
-### Secrets requeridos en GitHub (pipeline completo)
+### Secrets requeridos en GitHub
 
 | Secret | Descripción |
 |---|---|
@@ -242,7 +244,78 @@ Job 7: smoke-test-prod     ← pytest tests/test_smoke_app.py (contra prod ALB)
 | `LAB_ROLE_ARN` | `arn:aws:iam::123456789012:role/LabRole` | ARN del rol IAM de AWS Academy |
 | `VPC_ID` | `vpc-0abc12345` | ID de la VPC por defecto |
 | `SUBNET_IDS` | `subnet-aaa111,subnet-bbb222` | IDs de subredes públicas (separadas por coma) |
+| `SONAR_HOST_URL` | `https://sonarcloud.io` | URL del servidor SonarCloud |
 
 ---
 
-## Universidad EAFIT · Materia CI/CD · 2026!!
+## Monitoreo con MLflow
+
+### Qué se registra
+
+Cada vez que se realiza una predicción, la aplicación registra automáticamente un **run** en MLflow con:
+
+| Tipo | Nombre | Valor de ejemplo |
+|---|---|---|
+| Parámetro | `CRIM`, `ZN`, ..., `LSTAT` | Los 13 valores de entrada |
+| Métrica | `predicted_price` | `32.37` |
+| Tag | `environment` | `staging` / `production` / `local` |
+| Tag | `source` | `web_form` / `api` |
+
+El registro es **no bloqueante**: si el servidor MLflow no está disponible, la predicción se devuelve igual y el error se descarta silenciosamente.
+
+---
+
+### Probar MLflow localmente
+
+Necesitas dos terminales abiertas simultáneamente.
+
+**Terminal 1 — Iniciar el servidor MLflow**
+```bash
+# Crear carpeta de artefactos (solo la primera vez)
+mkdir -p mlflow-artifacts
+
+# Iniciar el servidor en el puerto 5001
+# (el 5000 está ocupado por AirPlay en macOS)
+.venv/bin/mlflow server \
+  --host 0.0.0.0 \
+  --port 5001 \
+  --backend-store-uri sqlite:///tmp/mlflow_local.db \
+  --default-artifact-root ./mlflow-artifacts
+```
+
+**Terminal 2 — Iniciar la app Flask con MLflow habilitado**
+```bash
+MLFLOW_TRACKING_URI=http://localhost:5001/ \
+ENVIRONMENT=local \
+.venv/bin/python -m app.app
+```
+
+Abre `http://localhost:8000`, haz una predicción, y luego abre el dashboard de MLflow en `http://localhost:5001`. Ve a la sección **Model training → Runs** para ver el run registrado con los parámetros y la métrica.
+
+---
+
+### MLflow en AWS (staging y producción)
+
+El pipeline de Terraform despliega automáticamente un servidor MLflow propio en cada entorno (staging y producción) como un servicio ECS Fargate independiente, accesible vía su propio Application Load Balancer.
+
+La app Flask recibe la URL del servidor MLflow como variable de entorno (`MLFLOW_TRACKING_URI`) al momento del despliegue. Cada predicción queda registrada en el servidor MLflow del entorno correspondiente.
+
+**Dashboard de MLflow en AWS:** la URL se imprime al final del paso `Print Dashboard URLs` en los jobs `deploy-tf-staging` y `deploy-tf-prod` del pipeline.
+
+---
+
+### Persistencia de los registros
+
+| Entorno | Backend store | ¿Persiste? |
+|---|---|---|
+| Local | SQLite en `/tmp/mlflow_local.db` | No — se pierde al reiniciar la máquina |
+| AWS (ECS Fargate) | SQLite dentro del contenedor en `/tmp/mlflow.db` | No — se pierde al reiniciar o redesplegar el contenedor |
+| AWS — artefactos | S3 (`mlflow-artifacts-<proyecto>-<entorno>`) | Sí — persisten en S3 |
+
+Los **metadatos** de los runs (parámetros, métricas, tags) se almacenan en SQLite dentro del contenedor ECS, que es efímero por naturaleza: se borran con cada redeploy o reinicio del servicio. Los **artefactos** (modelos guardados, imágenes, archivos) sí persisten en S3.
+
+Para persistencia real en producción se necesitaría reemplazar SQLite por una base de datos externa (RDS PostgreSQL/MySQL), lo cual está fuera del alcance de este proyecto. Para los fines del curso, la arquitectura actual demuestra correctamente la integración de monitoreo con MLflow.
+
+---
+
+## Universidad EAFIT · Materia CI/CD · 2026

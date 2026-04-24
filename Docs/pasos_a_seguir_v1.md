@@ -11,7 +11,7 @@ Este documento describe, en orden de ejecución, todos los cambios que deben rea
 | Paquete `app/` con `__init__.py` | ✅ | ✅ | Completado |
 | Módulo de lógica separado (`predictor.py`) | ✅ `calculadora.py` | ✅ `predictor.py` | Completado |
 | Endpoint `/health` | ✅ | ✅ | Completado |
-| Tests unitarios (`tests/`) | ✅ | ✅ 13 tests | Completado |
+| Tests unitarios (`tests/`) | ✅ | ✅ 15 tests | Completado |
 | Tests de aceptación con Selenium | ✅ | ✅ | Completado |
 | Tests de humo con Selenium | ✅ | ✅ | Completado |
 | `pytest.ini` con coverage + HTML | ✅ | ✅ | Completado |
@@ -23,13 +23,14 @@ Este documento describe, en orden de ejecución, todos los cambios que deben rea
 | Dockerfile optimizado (port 8000 fijo) | ✅ | ✅ | Completado |
 | `requirements.txt` con herramientas dev | ✅ | ✅ | Completado |
 | `.gitignore` con entradas de Terraform | ✅ | ✅ | Completado |
-| `sonar-project.properties` | ✅ | ✅ | **Completado** |
-| Infraestructura Terraform (`infra/`) | ✅ | ❌ | **Pendiente** |
-| Pipeline CI completo (GitHub Actions) | ✅ 7 jobs | ⚠️ Job 1 ✅ | **Jobs 2–7 pendientes (Fase CD)** |
-| Docker Hub como registro de imágenes | ✅ | ✅ | **Completado** |
-| Entorno Staging (ECS Fargate) | ✅ | ❌ | **Pendiente** |
-| Entorno Production (ECS Fargate) | ✅ | ❌ | **Pendiente** |
-| Secrets AWS + SonarCloud + DockerHub | ✅ | ⚠️ | **CI ✅ — AWS + Terraform ❌** |
+| `sonar-project.properties` | ✅ | ✅ | Completado |
+| Infraestructura Terraform (`infra/`) | ✅ | ✅ | **Completado** |
+| MLflow tracking server (monitoreo ML) | ❌ No lo usa | ✅ | **Completado (valor agregado)** |
+| Pipeline CI/CD completo (GitHub Actions) | ✅ 7 jobs | ✅ 7 jobs | **Completado** |
+| Docker Hub como registro de imágenes | ✅ | ✅ | Completado |
+| Entorno Staging (ECS Fargate) | ✅ | ✅ | **Completado** |
+| Entorno Production (ECS Fargate) | ✅ | ✅ | **Completado** |
+| Secrets AWS + SonarCloud + DockerHub | ✅ | ✅ | **Completado** |
 | `Procfile` (Heroku) | ❌ No lo usa | ❌ Eliminado | Completado |
 
 ---
@@ -361,9 +362,11 @@ jobs:
 
 ## Fase B — Entrega Continua (CD) — Equivalente al Entregable 3
 
-### ❌ Paso 10 — Crear la infraestructura Terraform
+### ✅ Paso 10 — Crear la infraestructura Terraform
 
-**Estado: PENDIENTE**
+**Estado: COMPLETADO** — La carpeta `infra/` contiene los tres archivos Terraform (`main.tf`, `variables.tf`, `outputs.tf`) que provisionan ECS Fargate + ALB para la app Flask y el servidor MLflow, con CloudWatch Logs, Security Groups y S3 para artefactos MLflow. El pipeline lo aplica automáticamente con `terraform apply` en los jobs 2 (staging) y 5 (producción).
+
+
 
 Crear la carpeta `infra/` con tres archivos que definen toda la infraestructura AWS necesaria:
 ECS Fargate + Application Load Balancer + Security Groups + CloudWatch Logs.
@@ -629,9 +632,11 @@ resource "aws_ecs_service" "main" {
 
 ---
 
-### ❌ Paso 11 — Completar el workflow de CD (agregar Jobs 2–7)
+### ✅ Paso 11 — Completar el workflow de CD (agregar Jobs 2–7)
 
-**Estado: PENDIENTE** — Agregar los siguientes jobs al final de `.github/workflows/main.yaml` (después del job `build-test-publish`):
+**Estado: COMPLETADO** — El archivo `.github/workflows/main.yaml` implementa los 7 jobs completos. Los jobs de CD (2–7) se agregaron al final del job `build-test-publish` y cubren despliegue en staging, tests de aceptación, despliegue en producción y tests de humo. El workflow también imprime las URLs del ALB y del dashboard de MLflow en el job summary de GitHub Actions.
+
+El YAML de referencia de los jobs 2–7 es el siguiente:
 
 ```yaml
   # ─────────────────────────────────────────────────────────────
@@ -891,17 +896,13 @@ resource "aws_ecs_service" "main" {
 
 ---
 
-### ⚠️ Paso 12 — Configurar Secrets y Variables en GitHub
+### ✅ Paso 12 — Configurar Secrets y Variables en GitHub
 
-**Estado: PARCIALMENTE COMPLETADO** — Los secrets y variables necesarios para la Fase CI (Job 1) ya están configurados. Faltan los de la Fase CD (Jobs 2–7 con AWS y Terraform).
+**Estado: COMPLETADO** — Todos los secrets y variables necesarios para el pipeline completo (CI + CD) están configurados en el repositorio de Daniel.
 
-**Ya configurados ✅ (CI funcionando):**
-- Secrets: `SONAR_TOKEN`, `DOCKERHUB_TOKEN`
-- Variables: `DOCKERHUB_USERNAME`, `SONAR_HOST_URL`
-
-**Pendientes ❌ (necesarios para Fase CD):**
-- Secrets: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN`, `SECRET_KEY`
-- Variables: `TF_STATE_BUCKET`, `LAB_ROLE_ARN`, `VPC_ID`, `SUBNET_IDS`
+**Configurados ✅:**
+- Secrets: `SONAR_TOKEN`, `DOCKERHUB_TOKEN`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN`, `SECRET_KEY`
+- Variables: `DOCKERHUB_USERNAME`, `SONAR_HOST_URL`, `TF_STATE_BUCKET`, `LAB_ROLE_ARN`, `VPC_ID`, `SUBNET_IDS`
 
 > **CRÍTICO:** Los secrets de AWS Academy **expiran cada 4 horas**. Deben actualizarse en GitHub cada vez que se haga Start Lab antes de correr el pipeline de CD.
 
@@ -932,9 +933,9 @@ Ir a GitHub → repositorio → **Settings → Secrets and variables → Actions
 
 ---
 
-### ❌ Paso 13 — Verificar el pipeline completo
+### ✅ Paso 13 — Verificar el pipeline completo
 
-**Estado: PENDIENTE**
+**Estado: COMPLETADO** — El pipeline de 7 jobs corre exitosamente en GitHub Actions. Los tests de aceptación pasan contra staging y los tests de humo pasan contra producción antes de confirmar el despliegue.
 
 **Checklist de verificación local antes del primer push:**
 
@@ -975,31 +976,48 @@ python -m app.app
 
 ---
 
+## ✅ Paso 14 — Integración de MLflow para monitoreo de predicciones
+
+**Estado: COMPLETADO** — Se integró MLflow 3.11.1 como dashboard de monitoreo de predicciones en tiempo real. Cada llamada a `predict_from_list()` registra un run en MLflow con los 13 parámetros de entrada, la métrica `predicted_price`, y los tags `environment` y `source`.
+
+**Cambios realizados:**
+- `requirements.txt` — agregado `mlflow==3.11.1` (compatible con gunicorn==23.0.0; MLflow 2.x no lo era)
+- `app/predictor.py` — agregada integración MLflow: `_MLFLOW_URI`, `_ENVIRONMENT`, `_log_prediction()`; la función `predict_from_list()` acepta parámetro `source`
+- `app/app.py` — la ruta `/predict` pasa `source="web_form"` a `predict_from_list()`
+- `infra/main.tf` — agregado servidor MLflow completo: S3 bucket para artefactos, ALB propio, ECS Fargate con imagen `ghcr.io/mlflow/mlflow:v3.11.1`, SQLite backend
+- `infra/outputs.tf` — agregada salida `mlflow_url`
+- `.github/workflows/main.yaml` — jobs 2 y 5 ahora capturan y publican la URL del dashboard MLflow
+- `tests/test_predictor.py` — agregados 2 tests con mocks: uno verifica que se llama a MLflow cuando hay URI configurada, otro verifica que un fallo de MLflow no rompe la predicción
+
+**Persistencia de los runs en AWS:** los metadatos (parámetros, métricas) se almacenan en SQLite dentro del contenedor ECS y se pierden al reiniciar o redesplegar el servicio. Los artefactos se guardan en S3 y sí persisten. Para persistencia completa se requeriría RDS, fuera del alcance de este proyecto.
+
+---
+
 ## Resumen de archivos — Estado final
 
 | Archivo | Acción | Estado |
 |---|---|---|
 | `app/__init__.py` | CREAR | ✅ Completado |
-| `app/app.py` | CREAR (movido desde raíz) | ✅ Completado |
-| `app/predictor.py` | CREAR | ✅ Completado |
+| `app/app.py` | CREAR (movido desde raíz) + agregar `source="web_form"` | ✅ Completado |
+| `app/predictor.py` | CREAR + integración MLflow | ✅ Completado |
 | `tests/test_app.py` | CREAR | ✅ Completado |
-| `tests/test_predictor.py` | CREAR | ✅ Completado |
+| `tests/test_predictor.py` | CREAR + 2 tests MLflow mock | ✅ Completado |
 | `tests/test_smoke_app.py` | CREAR | ✅ Completado |
 | `tests/test_acceptance_app.py` | CREAR | ✅ Completado |
 | `pytest.ini` | CREAR | ✅ Completado |
 | `.flake8` | CREAR | ✅ Completado |
 | `.dockerignore` | CREAR | ✅ Completado |
-| `requirements.txt` | MODIFICAR | ✅ Completado |
+| `requirements.txt` | MODIFICAR (agregar mlflow==3.11.1) | ✅ Completado |
 | `Dockerfile` | MODIFICAR | ✅ Completado |
 | `.gitignore` | MODIFICAR | ✅ Completado |
 | `front/home.html` | CORREGIR (`name="Age"` → `name="AGE"`) | ✅ Completado |
 | `app.py` (raíz) | ELIMINAR | ✅ Completado |
 | `Procfile` | ELIMINAR | ✅ Completado |
 | `sonar-project.properties` | CREAR | ✅ Completado |
-| `infra/main.tf` | CREAR | ❌ Pendiente |
-| `infra/variables.tf` | CREAR | ❌ Pendiente |
-| `infra/outputs.tf` | CREAR | ❌ Pendiente |
-| `.github/workflows/main.yaml` | REEMPLAZAR | ✅ Completado (Job 1 CI) — Jobs 2–7 pendientes |
+| `infra/main.tf` | CREAR (app + MLflow server) | ✅ Completado |
+| `infra/variables.tf` | CREAR | ✅ Completado |
+| `infra/outputs.tf` | CREAR (incluye mlflow_url) | ✅ Completado |
+| `.github/workflows/main.yaml` | REEMPLAZAR (7 jobs completos + MLflow URLs) | ✅ Completado |
 
 
 # Archivos de referencia
@@ -1012,4 +1030,4 @@ https://github.com/danielr9911/cicd-workshops/blob/main/Taller-Entregable3.md
 
 ---
 
-*Documento actualizado el 2026-04-23 | Universidad EAFIT — Materia CI/CD*
+*Documento actualizado el 2026-04-24 | Universidad EAFIT — Materia CI/CD*

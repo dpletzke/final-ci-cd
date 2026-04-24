@@ -40,7 +40,7 @@ def predict_api():
 def predict():
     """Accept form data and render the prediction result."""
     features = [float(request.form[f]) for f in FEATURE_ORDER]
-    output = predict_from_list(features)
+    output = predict_from_list(features, source="web_form")
     return render_template("home.html", prediction=output)
 
 

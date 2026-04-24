@@ -114,6 +114,7 @@ jobs:
       alb_url_staging: ${{ steps.get_tf_outputs.outputs.alb_url }}
       cluster_name_staging: ${{ steps.get_tf_outputs.outputs.ecs_cluster_name }}
       service_name_staging: ${{ steps.get_tf_outputs.outputs.ecs_service_name }}
+      mlflow_url_staging: ${{ steps.get_tf_outputs.outputs.mlflow_url }}
 
     steps:
       - name: Checkout code
@@ -174,9 +175,17 @@ jobs:
           ALB_URL=$(terraform output -raw alb_url)
           ECS_CLUSTER_NAME=$(terraform output -raw ecs_cluster_name)
           ECS_SERVICE_NAME=$(terraform output -raw ecs_service_name)
+          MLFLOW_URL=$(terraform output -raw mlflow_url)
           echo "alb_url=${ALB_URL}" >> $GITHUB_OUTPUT
           echo "ecs_cluster_name=${ECS_CLUSTER_NAME}" >> $GITHUB_OUTPUT
           echo "ecs_service_name=${ECS_SERVICE_NAME}" >> $GITHUB_OUTPUT
+          echo "mlflow_url=${MLFLOW_URL}" >> $GITHUB_OUTPUT
+
+      - name: Print Dashboard URLs (Staging)
+        run: |
+          echo "### Staging URLs" >> $GITHUB_STEP_SUMMARY
+          echo "- **App:** ${{ steps.get_tf_outputs.outputs.alb_url }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **MLflow Dashboard:** ${{ steps.get_tf_outputs.outputs.mlflow_url }}" >> $GITHUB_STEP_SUMMARY
 
   # ─────────────────────────────────────────────────────────────
   # Job 3: Forzar despliegue en ECS Staging
@@ -245,6 +254,7 @@ jobs:
       alb_url_prod: ${{ steps.get_tf_outputs.outputs.alb_url }}
       cluster_name_prod: ${{ steps.get_tf_outputs.outputs.ecs_cluster_name }}
       service_name_prod: ${{ steps.get_tf_outputs.outputs.ecs_service_name }}
+      mlflow_url_prod: ${{ steps.get_tf_outputs.outputs.mlflow_url }}
 
     steps:
       - name: Checkout code
@@ -305,9 +315,17 @@ jobs:
           ALB_URL=$(terraform output -raw alb_url)
           ECS_CLUSTER_NAME=$(terraform output -raw ecs_cluster_name)
           ECS_SERVICE_NAME=$(terraform output -raw ecs_service_name)
+          MLFLOW_URL=$(terraform output -raw mlflow_url)
           echo "alb_url=${ALB_URL}" >> $GITHUB_OUTPUT
           echo "ecs_cluster_name=${ECS_CLUSTER_NAME}" >> $GITHUB_OUTPUT
           echo "ecs_service_name=${ECS_SERVICE_NAME}" >> $GITHUB_OUTPUT
+          echo "mlflow_url=${MLFLOW_URL}" >> $GITHUB_OUTPUT
+
+      - name: Print Dashboard URLs (Production)
+        run: |
+          echo "### Production URLs" >> $GITHUB_STEP_SUMMARY
+          echo "- **App:** ${{ steps.get_tf_outputs.outputs.alb_url }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **MLflow Dashboard:** ${{ steps.get_tf_outputs.outputs.mlflow_url }}" >> $GITHUB_STEP_SUMMARY
 
   # ─────────────────────────────────────────────────────────────
   # Job 6: Forzar despliegue en ECS Producción

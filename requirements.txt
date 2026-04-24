@@ -14,3 +14,4 @@ pytest-html
 coverage
 selenium
 webdriver-manager
+mlflow==3.11.1
