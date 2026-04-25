@@ -214,8 +214,8 @@ jobs:
 
       - name: Validate Monitoring Deployment (Staging)
         run: |
-          curl -fsS --retry 10 --retry-delay 15 "${{ steps.get_tf_outputs.outputs.prometheus_url }}-/healthy"
-          curl -fsS --retry 10 --retry-delay 15 "${{ steps.get_tf_outputs.outputs.grafana_url }}api/health"
+          curl -fsS --retry 10 --retry-delay 15 "${{ steps.get_tf_outputs.outputs.prometheus_url }}/-/healthy"
+          curl -fsS --retry 10 --retry-delay 15 "${{ steps.get_tf_outputs.outputs.grafana_url }}/api/health"
 
       - name: Print Dashboard URLs (Staging)
         run: |
