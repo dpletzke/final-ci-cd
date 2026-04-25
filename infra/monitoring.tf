@@ -467,7 +467,7 @@ resource "aws_ecs_task_definition" "grafana" {
       entryPoint = ["sh", "-c"]
       command = [
         <<-EOT
-mkdir -p /tmp/grafana-provisioning/datasources /tmp/grafana-provisioning/dashboards /var/lib/grafana/dashboards
+mkdir -p /tmp/grafana-provisioning/datasources /tmp/grafana-provisioning/dashboards
 cat > /tmp/grafana-provisioning/datasources/prometheus.yml <<'EOF'
 apiVersion: 1
 datasources:
@@ -489,12 +489,11 @@ providers:
     disableDeletion: false
     editable: true
     options:
-      path: /var/lib/grafana/dashboards
+      path: /tmp/grafana-provisioning/dashboards
 EOF
-cat > /var/lib/grafana/dashboards/boston-house-app.json <<'EOF'
+cat > /tmp/grafana-provisioning/dashboards/boston-house-app.json <<'EOF'
 ${local.grafana_dashboard}
 EOF
-cp /tmp/grafana-provisioning/dashboards/dashboards.yml /var/lib/grafana/provisioning/dashboards/dashboards.yml
 /run.sh
         EOT
       ]
