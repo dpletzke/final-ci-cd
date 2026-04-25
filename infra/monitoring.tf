@@ -3,6 +3,10 @@
 # Deploy separately from app using: terraform apply -target=module.monitoring
 # Run ONCE per environment (staging/production), then never again
 
+locals {
+  grafana_dashboard = file("${path.module}/../monitoring/grafana/dashboards/boston-house-app.json")
+}
+
 # ─────────────────────────────────────────────────────────────
 # MLflow Tracking Server
 # ─────────────────────────────────────────────────────────────
@@ -462,8 +466,8 @@ resource "aws_ecs_task_definition" "grafana" {
 
       entryPoint = ["sh", "-c"]
       command = [
-        <<EOT
-mkdir -p /tmp/grafana-provisioning/datasources
+        <<-EOT
+mkdir -p /tmp/grafana-provisioning/datasources /tmp/grafana-provisioning/dashboards /var/lib/grafana/dashboards
 cat > /tmp/grafana-provisioning/datasources/prometheus.yml <<'EOF'
 apiVersion: 1
 datasources:
@@ -474,8 +478,25 @@ datasources:
     isDefault: true
     editable: true
 EOF
+cat > /tmp/grafana-provisioning/dashboards/dashboards.yml <<'EOF'
+apiVersion: 1
+
+providers:
+  - name: Boston House Dashboards
+    orgId: 1
+    folder: Boston House
+    type: file
+    disableDeletion: false
+    editable: true
+    options:
+      path: /var/lib/grafana/dashboards
+EOF
+cat > /var/lib/grafana/dashboards/boston-house-app.json <<'EOF'
+${local.grafana_dashboard}
+EOF
+cp /tmp/grafana-provisioning/dashboards/dashboards.yml /var/lib/grafana/provisioning/dashboards/dashboards.yml
 /run.sh
-EOT
+        EOT
       ]
 
       portMappings = [{ containerPort = 3000, protocol = "tcp" }]
