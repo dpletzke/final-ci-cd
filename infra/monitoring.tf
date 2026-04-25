@@ -112,8 +112,8 @@ resource "aws_ecs_task_definition" "mlflow" {
   family                   = "${var.project_name}-${var.environment_name}-mlflow"
   requires_compatibilities = ["FARGATE"]
   network_mode             = "awsvpc"
-  cpu                      = "256"
-  memory                   = "512"
+  cpu                      = "512"
+  memory                   = "1024"
   task_role_arn            = var.lab_role_arn
   execution_role_arn       = var.lab_role_arn
 
@@ -126,6 +126,7 @@ resource "aws_ecs_task_definition" "mlflow" {
         "mlflow", "server",
         "--host", "0.0.0.0",
         "--port", "5000",
+        "--workers", "2",
         "--allowed-hosts", "0.0.0.0",
         "--default-artifact-root", "s3://${aws_s3_bucket.mlflow_artifacts.bucket}/artifacts",
         "--backend-store-uri", "sqlite:////tmp/mlflow.db"
