@@ -3,8 +3,14 @@ name: CI/CD Pipeline — Boston House Pricing
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - 'infra/monitoring/**'
+      - '.github/workflows/monitoring.yaml'
   pull_request:
     branches: [main]
+    paths-ignore:
+      - 'infra/monitoring/**'
+      - '.github/workflows/monitoring.yaml'
   workflow_dispatch:
 
 permissions:
