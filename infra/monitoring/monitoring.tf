@@ -1,7 +1,15 @@
-# infra/monitoring.tf
+# infra/monitoring/monitoring.tf
 # Monitoring infrastructure: MLflow, Prometheus, Grafana
-# Deploy separately from app using: terraform apply -target=module.monitoring
+# Deploy separately from app using: terraform apply in this directory only
 # Run ONCE per environment (staging/production), then never again
+
+data "aws_ecs_cluster" "main" {
+  cluster_name = "${var.project_name}-${var.environment_name}-cluster"
+}
+
+data "aws_lb" "main" {
+  name = "${var.project_name}-${var.environment_name}-alb"
+}
 
 locals {
   grafana_dashboard = file("${path.module}/../monitoring/grafana/dashboards/boston-house-app.json")
@@ -150,7 +158,7 @@ resource "aws_ecs_task_definition" "mlflow" {
 
 resource "aws_ecs_service" "mlflow" {
   name            = "${var.project_name}-${var.environment_name}-mlflow-service"
-  cluster         = aws_ecs_cluster.main.id
+  cluster         = data.aws_ecs_cluster.main.id
   task_definition = aws_ecs_task_definition.mlflow.arn
   desired_count   = 1
   launch_type     = "FARGATE"
@@ -302,7 +310,7 @@ scrape_configs:
     metrics_path: /metrics
     static_configs:
       - targets:
-          - ${aws_lb.main.dns_name}:80
+          - ${data.aws_lb.main.dns_name}:80
 EOF
 /bin/prometheus --config.file=/tmp/prometheus.yml --storage.tsdb.path=/prometheus --web.listen-address=0.0.0.0:9090
 EOT
@@ -326,7 +334,7 @@ EOT
 
 resource "aws_ecs_service" "prometheus" {
   name            = "${var.project_name}-${var.environment_name}-prometheus-service"
-  cluster         = aws_ecs_cluster.main.id
+  cluster         = data.aws_ecs_cluster.main.id
   task_definition = aws_ecs_task_definition.prometheus.arn
   desired_count   = 1
   launch_type     = "FARGATE"
@@ -351,7 +359,7 @@ resource "aws_ecs_service" "prometheus" {
     ignore_changes = [desired_count]
   }
 
-  depends_on = [aws_lb_listener.prometheus_http, aws_ecs_service.main]
+  depends_on = [aws_lb_listener.prometheus_http]
   tags       = { Environment = var.environment_name }
 }
 
@@ -524,7 +532,7 @@ EOF
 
 resource "aws_ecs_service" "grafana" {
   name            = "${var.project_name}-${var.environment_name}-grafana-service"
-  cluster         = aws_ecs_cluster.main.id
+  cluster         = data.aws_ecs_cluster.main.id
   task_definition = aws_ecs_task_definition.grafana.arn
   desired_count   = 1
   launch_type     = "FARGATE"
