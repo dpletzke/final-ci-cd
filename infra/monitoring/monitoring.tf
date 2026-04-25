@@ -12,7 +12,7 @@ data "aws_lb" "main" {
 }
 
 locals {
-  grafana_dashboard = file("${path.module}/../monitoring/grafana/dashboards/boston-house-app.json")
+  grafana_dashboard = file("${path.module}/../../monitoring/grafana/dashboards/boston-house-app.json")
 }
 
 # ─────────────────────────────────────────────────────────────
