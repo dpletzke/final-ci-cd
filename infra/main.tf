@@ -300,6 +300,7 @@ resource "aws_ecs_task_definition" "mlflow" {
         "mlflow", "server",
         "--host", "0.0.0.0",
         "--port", "5000",
+        "--allowed-hosts", "0.0.0.0",
         "--default-artifact-root", "s3://${aws_s3_bucket.mlflow_artifacts.bucket}/artifacts",
         "--backend-store-uri", "sqlite:////tmp/mlflow.db"
       ]
