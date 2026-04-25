@@ -19,18 +19,3 @@ output "ecs_service_name" {
   description = "Nombre del ECS Service"
   value       = aws_ecs_service.main.name
 }
-
-output "mlflow_url" {
-  description = "URL del MLflow Tracking Server"
-  value       = "http://${aws_lb.mlflow.dns_name}/"
-}
-
-output "prometheus_url" {
-  description = "URL del servidor Prometheus"
-  value       = "http://${aws_lb.prometheus.dns_name}/"
-}
-
-output "grafana_url" {
-  description = "URL del dashboard Grafana"
-  value       = "http://${aws_lb.grafana.dns_name}/"
-}

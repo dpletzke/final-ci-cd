@@ -134,9 +134,6 @@ jobs:
       alb_url_staging: ${{ steps.get_tf_outputs.outputs.alb_url }}
       cluster_name_staging: ${{ steps.get_tf_outputs.outputs.ecs_cluster_name }}
       service_name_staging: ${{ steps.get_tf_outputs.outputs.ecs_service_name }}
-      mlflow_url_staging: ${{ steps.get_tf_outputs.outputs.mlflow_url }}
-      prometheus_url_staging: ${{ steps.get_tf_outputs.outputs.prometheus_url }}
-      grafana_url_staging: ${{ steps.get_tf_outputs.outputs.grafana_url }}
 
     steps:
       - name: Checkout code
@@ -186,7 +183,6 @@ jobs:
           TF_VAR_lab_role_arn: ${{ vars.LAB_ROLE_ARN }}
           TF_VAR_vpc_id: ${{ vars.VPC_ID }}
           TF_VAR_secret_key: ${{ secrets.SECRET_KEY }}
-          TF_VAR_grafana_admin_password: ${{ secrets.GRAFANA_ADMIN_PASSWORD || 'admin' }}
         run: |
           IMAGE_URI="${{ vars.DOCKERHUB_USERNAME }}/${{ needs.build-test-publish.outputs.repo_name }}:${{ needs.build-test-publish.outputs.image_tag }}"
           SUBNET_LIST=$(echo "${{ vars.SUBNET_IDS }}" | \
@@ -202,28 +198,9 @@ jobs:
           ALB_URL=$(terraform output -raw alb_url)
           ECS_CLUSTER_NAME=$(terraform output -raw ecs_cluster_name)
           ECS_SERVICE_NAME=$(terraform output -raw ecs_service_name)
-          MLFLOW_URL=$(terraform output -raw mlflow_url)
-          PROMETHEUS_URL=$(terraform output -raw prometheus_url)
-          GRAFANA_URL=$(terraform output -raw grafana_url)
           echo "alb_url=${ALB_URL}" >> $GITHUB_OUTPUT
           echo "ecs_cluster_name=${ECS_CLUSTER_NAME}" >> $GITHUB_OUTPUT
           echo "ecs_service_name=${ECS_SERVICE_NAME}" >> $GITHUB_OUTPUT
-          echo "mlflow_url=${MLFLOW_URL}" >> $GITHUB_OUTPUT
-          echo "prometheus_url=${PROMETHEUS_URL}" >> $GITHUB_OUTPUT
-          echo "grafana_url=${GRAFANA_URL}" >> $GITHUB_OUTPUT
-
-      - name: Validate Monitoring Deployment (Staging)
-        run: |
-          curl -fsS --retry 10 --retry-delay 15 "${{ steps.get_tf_outputs.outputs.prometheus_url }}/-/healthy"
-          curl -fsS --retry 10 --retry-delay 15 "${{ steps.get_tf_outputs.outputs.grafana_url }}/api/health"
-
-      - name: Print Dashboard URLs (Staging)
-        run: |
-          echo "### Staging URLs" >> $GITHUB_STEP_SUMMARY
-          echo "- **App:** ${{ steps.get_tf_outputs.outputs.alb_url }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **MLflow Dashboard:** ${{ steps.get_tf_outputs.outputs.mlflow_url }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Prometheus:** ${{ steps.get_tf_outputs.outputs.prometheus_url }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Grafana:** ${{ steps.get_tf_outputs.outputs.grafana_url }}" >> $GITHUB_STEP_SUMMARY
 
   # ─────────────────────────────────────────────────────────────
   # Job 3: Forzar despliegue en ECS Staging
@@ -319,9 +296,6 @@ jobs:
       alb_url_prod: ${{ steps.get_tf_outputs.outputs.alb_url }}
       cluster_name_prod: ${{ steps.get_tf_outputs.outputs.ecs_cluster_name }}
       service_name_prod: ${{ steps.get_tf_outputs.outputs.ecs_service_name }}
-      mlflow_url_prod: ${{ steps.get_tf_outputs.outputs.mlflow_url }}
-      prometheus_url_prod: ${{ steps.get_tf_outputs.outputs.prometheus_url }}
-      grafana_url_prod: ${{ steps.get_tf_outputs.outputs.grafana_url }}
 
     steps:
       - name: Checkout code
@@ -371,7 +345,6 @@ jobs:
           TF_VAR_lab_role_arn: ${{ vars.LAB_ROLE_ARN }}
           TF_VAR_vpc_id: ${{ vars.VPC_ID }}
           TF_VAR_secret_key: ${{ secrets.SECRET_KEY }}
-          TF_VAR_grafana_admin_password: ${{ secrets.GRAFANA_ADMIN_PASSWORD || 'admin' }}
         run: |
           IMAGE_URI="${{ vars.DOCKERHUB_USERNAME }}/${{ needs.build-test-publish.outputs.repo_name }}:${{ needs.build-test-publish.outputs.image_tag }}"
           SUBNET_LIST=$(echo "${{ vars.SUBNET_IDS }}" | \
@@ -387,28 +360,9 @@ jobs:
           ALB_URL=$(terraform output -raw alb_url)
           ECS_CLUSTER_NAME=$(terraform output -raw ecs_cluster_name)
           ECS_SERVICE_NAME=$(terraform output -raw ecs_service_name)
-          MLFLOW_URL=$(terraform output -raw mlflow_url)
-          PROMETHEUS_URL=$(terraform output -raw prometheus_url)
-          GRAFANA_URL=$(terraform output -raw grafana_url)
           echo "alb_url=${ALB_URL}" >> $GITHUB_OUTPUT
           echo "ecs_cluster_name=${ECS_CLUSTER_NAME}" >> $GITHUB_OUTPUT
           echo "ecs_service_name=${ECS_SERVICE_NAME}" >> $GITHUB_OUTPUT
-          echo "mlflow_url=${MLFLOW_URL}" >> $GITHUB_OUTPUT
-          echo "prometheus_url=${PROMETHEUS_URL}" >> $GITHUB_OUTPUT
-          echo "grafana_url=${GRAFANA_URL}" >> $GITHUB_OUTPUT
-
-      - name: Validate Monitoring Deployment (Production)
-        run: |
-          curl -fsS --retry 10 --retry-delay 15 "${{ steps.get_tf_outputs.outputs.prometheus_url }}-/healthy"
-          curl -fsS --retry 10 --retry-delay 15 "${{ steps.get_tf_outputs.outputs.grafana_url }}api/health"
-
-      - name: Print Dashboard URLs (Production)
-        run: |
-          echo "### Production URLs" >> $GITHUB_STEP_SUMMARY
-          echo "- **App:** ${{ steps.get_tf_outputs.outputs.alb_url }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **MLflow Dashboard:** ${{ steps.get_tf_outputs.outputs.mlflow_url }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Prometheus:** ${{ steps.get_tf_outputs.outputs.prometheus_url }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Grafana:** ${{ steps.get_tf_outputs.outputs.grafana_url }}" >> $GITHUB_STEP_SUMMARY
 
   # ─────────────────────────────────────────────────────────────
   # Job 6: Forzar despliegue en ECS Producción
